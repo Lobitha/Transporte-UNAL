@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Transporte Interno UNAL</title>
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+  <aside class="sidebar">
+    <h2>UNAL</h2>
+    <p>Transporte Interno<br>Sistema Piloto</p>
+
+    <a href="#resumen">Resumen semanal</a>
+    <a href="#graficas">Demanda</a>
+    <a href="#ruta">Ruta del bus</a>
+    <a href="#tabla">Tabla semanal</a>
+    <a href="#conclusiones">Conclusiones</a>
+
+    <div class="sidebar-footer">
+      Facultad de Ingeniería<br>
+      Sección de Transportes
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <section id="resumen" class="hero">
+      <div>
+        <h1>Panel semanal del transporte interno</h1>
+        <p>Datos recolectados del sistema de conteo de pasajeros.</p>
+      </div>
+
+      <div class="estado">
+        <strong>● Sistema operativo</strong>
+        <span>Actualización automática cada 30 s</span>
+        <span id="fechaSistema">--</span>
+      </div>
+    </section>
+
+    <section class="cards">
+      <div class="card">
+        <span>Pasajeros registrados</span>
+        <h2 id="totalSemana">--</h2>
+        <p>Lunes a viernes</p>
+      </div>
+
+      <div class="card">
+        <span>Día de mayor demanda</span>
+        <h2 id="diaMayor">--</h2>
+        <p id="pasajerosDiaMayor">-- pasajeros</p>
+      </div>
+
+      <div class="card">
+        <span>Hora pico de la semana</span>
+        <h2 id="horaPico">--</h2>
+        <p>Franja de mayor demanda</p>
+      </div>
+
+      <div class="card">
+        <span>Máxima ocupación</span>
+        <h2 id="maxOcupacion">--</h2>
+        <p>Pasajeros a bordo</p>
+      </div>
+
+      <div class="card">
+        <span>Promedio de ocupación</span>
+        <h2 id="promedioOcupacion">--</h2>
+        <p>Pasajeros a bordo</p>
+      </div>
+    </section>
+
+    <section id="graficas" class="grid-2">
+      <div class="panel">
+        <h3>Demanda de pasajeros por día</h3>
+        <canvas id="chartDias"></canvas>
+      </div>
+
+      <div class="panel">
+        <h3>Demanda de pasajeros por hora</h3>
+        <canvas id="chartHoras"></canvas>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <div id="tabla" class="panel">
+        <h3>Tabla semanal</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Día</th>
+              <th>Subieron</th>
+              <th>Bajaron</th>
+              <th>Máx. ocupación</th>
+              <th>Hora pico</th>
+            </tr>
+          </thead>
+          <tbody id="tablaSemanal"></tbody>
+        </table>
+      </div>
+
+      <div id="conclusiones" class="panel">
+        <h3>Conclusiones de la semana</h3>
+        <ul id="listaConclusiones"></ul>
+      </div>
+    </section>
+
+    <section id="ruta" class="panel">
+      <h3>Ruta del servicio de transporte interno</h3>
+      <p class="texto-suave">Recorrido realizado por la ruta.</p>
+      <img src="ruta_bus.jpeg" alt="Ruta del bus UNAL" class="ruta-img">
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
