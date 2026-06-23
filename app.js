@@ -247,7 +247,6 @@ function crearTabla(resumenDias, totalSemana) {
       <tr>
         <td>${dia}</td>
         <td>${d.subieron}</td>
-        <td>${d.bajaron}</td>
         <td>${d.maxOcupacion}</td>
         <td>${d.horaPico}</td>
       </tr>
