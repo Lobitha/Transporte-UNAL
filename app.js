@@ -229,14 +229,11 @@ function crearGraficaHoras(resumenHoras) {
 
 function crearTabla(resumenDias, totalSemana) {
   let html = "";
-  let totalBajaron = 0;
   let maxTotal = 0;
   let horaPicoTotal = "--";
 
   diasSemana.forEach(dia => {
     const d = resumenDias[dia];
-
-    totalBajaron += d.bajaron;
 
     if (d.maxOcupacion > maxTotal) {
       maxTotal = d.maxOcupacion;
@@ -257,7 +254,6 @@ function crearTabla(resumenDias, totalSemana) {
     <tr class="total">
       <td>Total semana</td>
       <td>${totalSemana}</td>
-      <td>${totalBajaron}</td>
       <td>${maxTotal}</td>
       <td>${horaPicoTotal}</td>
     </tr>
