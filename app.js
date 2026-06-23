@@ -53,7 +53,6 @@ async function cargarDatos() {
           hora: fecha ? formatoHora(fecha) : "--",
           horaEntera: fecha ? fecha.getHours() : 0,
           subieron: row.c[3]?.v || 0,
-          bajaron: row.c[4]?.v || 0,
           abordo: row.c[5]?.v || 0
         };
       })
@@ -65,7 +64,6 @@ async function cargarDatos() {
     diasSemana.forEach(dia => {
       resumenDias[dia] = {
         subieron: 0,
-        bajaron: 0,
         maxOcupacion: 0,
         horaPico: "--"
       };
@@ -81,7 +79,6 @@ async function cargarDatos() {
       sumaOcupacion += d.abordo;
 
       resumenDias[d.dia].subieron += d.subieron;
-      resumenDias[d.dia].bajaron += d.bajaron;
 
       if (d.abordo > resumenDias[d.dia].maxOcupacion) {
         resumenDias[d.dia].maxOcupacion = d.abordo;
