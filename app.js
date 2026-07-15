@@ -4,7 +4,6 @@ let chartDias = null;
 let chartHoras = null;
 
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
-const diasMedidos = ["Lunes", "Martes", "Miércoles", "Jueves"];
 
 function obtenerFecha(celda) {
   if (!celda) return null;
@@ -27,9 +26,7 @@ function obtenerFecha(celda) {
   if (celda.f) {
     const fecha = new Date(celda.f);
 
-    if (!isNaN(fecha)) {
-      return fecha;
-    }
+    if (!isNaN(fecha)) return fecha;
   }
 
   return null;
@@ -57,73 +54,9 @@ function formatoHora(fecha) {
   });
 }
 
-function convertirHoraAMinutos(hora) {
-  if (!hora || hora === "--") return null;
-
-  const partes = hora.split(":").map(Number);
-
-  if (partes.length < 2) return null;
-
-  return partes[0] * 60 + partes[1];
-}
-
-function convertirMinutosAHora(minutosTotales) {
-  const minutosDia = 24 * 60;
-  const minutosAjustados =
-    ((minutosTotales % minutosDia) + minutosDia) % minutosDia;
-
-  const hora = Math.floor(minutosAjustados / 60);
-  const minutos = minutosAjustados % 60;
-
-  return `${String(hora).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
-}
-
-function calcularViernesEstimado(resumenDias) {
-  const promedioSubieron = Math.round(
-    diasMedidos.reduce(
-      (suma, dia) => suma + resumenDias[dia].subieron,
-      0
-    ) / diasMedidos.length
-  );
-
-  const promedioMaxOcupacion = Math.round(
-    diasMedidos.reduce(
-      (suma, dia) => suma + resumenDias[dia].maxOcupacion,
-      0
-    ) / diasMedidos.length
-  );
-
-  const horasPicoValidas = diasMedidos
-    .map(dia => convertirHoraAMinutos(resumenDias[dia].horaPico))
-    .filter(minutos => minutos !== null);
-
-  let horaPicoPromedio = "--";
-
-  if (horasPicoValidas.length > 0) {
-    const minutosPromedio = Math.round(
-      horasPicoValidas.reduce((suma, minutos) => suma + minutos, 0) /
-      horasPicoValidas.length
-    );
-
-    horaPicoPromedio = convertirMinutosAHora(minutosPromedio);
-  }
-
-  resumenDias.Viernes = {
-    subieron: promedioSubieron,
-    maxOcupacion: promedioMaxOcupacion,
-    horaPico: horaPicoPromedio,
-    estimado: true
-  };
-}
-
 async function cargarDatos() {
   try {
     const respuesta = await fetch(url);
-
-    if (!respuesta.ok) {
-      throw new Error(`Error HTTP: ${respuesta.status}`);
-    }
-
     const texto = await respuesta.text();
     const json = JSON.parse(texto.substring(47).slice(0, -2));
 
@@ -137,11 +70,11 @@ async function cargarDatos() {
           dia: fecha ? nombreDia(fecha) : "",
           hora: fecha ? formatoHora(fecha) : "--",
           horaEntera: fecha ? fecha.getHours() : 0,
-          subieron: Number(row.c[3]?.v) || 0,
-          abordo: Number(row.c[5]?.v) || 0
+          subieron: row.c[3]?.v || 0,
+          abordo: row.c[5]?.v || 0
         };
       })
-      .filter(dato => dato.fecha && diasSemana.includes(dato.dia));
+      .filter(d => d.fecha && diasSemana.includes(d.dia));
 
     const resumenDias = {};
     const resumenHoras = {};
@@ -150,36 +83,33 @@ async function cargarDatos() {
       resumenDias[dia] = {
         subieron: 0,
         maxOcupacion: 0,
-        horaPico: "--",
-        estimado: false
+        horaPico: "--"
       };
     });
 
-    let totalMedido = 0;
+    let totalSemana = 0;
     let sumaOcupacion = 0;
-    let cantidadOcupaciones = 0;
-    let maxOcupacionReal = 0;
+    let maxOcupacion = 0;
     let horaPicoSemana = "--";
 
-    datos.forEach(dato => {
-      totalMedido += dato.subieron;
-      sumaOcupacion += dato.abordo;
-      cantidadOcupaciones++;
+    datos.forEach(d => {
+      totalSemana += d.subieron;
+      sumaOcupacion += d.abordo;
 
-      resumenDias[dato.dia].subieron += dato.subieron;
+      resumenDias[d.dia].subieron += d.subieron;
 
-      if (dato.abordo > resumenDias[dato.dia].maxOcupacion) {
-        resumenDias[dato.dia].maxOcupacion = dato.abordo;
-        resumenDias[dato.dia].horaPico = dato.hora;
+      if (d.abordo > resumenDias[d.dia].maxOcupacion) {
+        resumenDias[d.dia].maxOcupacion = d.abordo;
+        resumenDias[d.dia].horaPico = d.hora;
       }
 
-      if (dato.abordo > maxOcupacionReal) {
-        maxOcupacionReal = dato.abordo;
-        horaPicoSemana = dato.hora;
+      if (d.abordo > maxOcupacion) {
+        maxOcupacion = d.abordo;
+        horaPicoSemana = d.hora;
       }
 
       const horaTexto =
-        `${String(dato.horaEntera).padStart(2, "0")}:00`;
+        `${String(d.horaEntera).padStart(2, "0")}:00`;
 
       if (!resumenHoras[horaTexto]) {
         resumenHoras[horaTexto] = {
@@ -188,14 +118,57 @@ async function cargarDatos() {
         };
       }
 
-      resumenHoras[horaTexto].suma += dato.abordo;
+      resumenHoras[horaTexto].suma += d.abordo;
       resumenHoras[horaTexto].cantidad++;
     });
 
-    calcularViernesEstimado(resumenDias);
+    // PROMEDIO DE LUNES A JUEVES PARA EL VIERNES
 
-    const totalSemana =
-      totalMedido + resumenDias.Viernes.subieron;
+    const diasPromedio = [
+      "Lunes",
+      "Martes",
+      "Miércoles",
+      "Jueves"
+    ];
+
+    resumenDias["Viernes"].subieron = Math.round(
+      diasPromedio.reduce(
+        (suma, dia) => suma + resumenDias[dia].subieron,
+        0
+      ) / 4
+    );
+
+    resumenDias["Viernes"].maxOcupacion = Math.round(
+      diasPromedio.reduce(
+        (suma, dia) => suma + resumenDias[dia].maxOcupacion,
+        0
+      ) / 4
+    );
+
+    const horasPico = diasPromedio
+      .map(dia => resumenDias[dia].horaPico)
+      .filter(hora => hora !== "--")
+      .map(hora => {
+        const [h, m] = hora.split(":").map(Number);
+        return h * 60 + m;
+      });
+
+    if (horasPico.length > 0) {
+      const promedioMinutos = Math.round(
+        horasPico.reduce(
+          (suma, minutos) => suma + minutos,
+          0
+        ) / horasPico.length
+      );
+
+      const hora = Math.floor(promedioMinutos / 60);
+      const minutos = promedioMinutos % 60;
+
+      resumenDias["Viernes"].horaPico =
+        `${String(hora).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
+    }
+
+    totalSemana += resumenDias["Viernes"].subieron;
 
     let diaMayor = "--";
     let valorDiaMayor = 0;
@@ -207,37 +180,42 @@ async function cargarDatos() {
       }
     });
 
-    const promedioOcupacionMedido =
-      cantidadOcupaciones > 0
-        ? sumaOcupacion / cantidadOcupaciones
+    const promedioOcupacion =
+      datos.length > 0
+        ? sumaOcupacion / datos.length
         : 0;
 
-    const promedioOcupacionSemanal =
-      (
-        promedioOcupacionMedido * 4 +
-        resumenDias.Viernes.maxOcupacion
-      ) / 5;
+    document.getElementById("totalSemana").innerText =
+      totalSemana;
 
-    document.getElementById("totalSemana").innerText = totalSemana;
-    document.getElementById("diaMayor").innerText = diaMayor;
+    document.getElementById("diaMayor").innerText =
+      diaMayor;
+
     document.getElementById("pasajerosDiaMayor").innerText =
       `${valorDiaMayor} pasajeros`;
-    document.getElementById("horaPico").innerText = horaPicoSemana;
-    document.getElementById("maxOcupacion").innerText = maxOcupacionReal;
+
+    document.getElementById("horaPico").innerText =
+      horaPicoSemana;
+
+    document.getElementById("maxOcupacion").innerText =
+      maxOcupacion;
+
     document.getElementById("promedioOcupacion").innerText =
-      promedioOcupacionSemanal.toFixed(1);
+      promedioOcupacion.toFixed(1);
+
     document.getElementById("fechaSistema").innerText =
       new Date().toLocaleString("es-CO");
 
     crearGraficaDias(resumenDias);
     crearGraficaHoras(resumenHoras);
     crearTabla(resumenDias, totalSemana);
+
     crearConclusiones(
       diaMayor,
       valorDiaMayor,
       horaPicoSemana,
-      maxOcupacionReal,
-      promedioOcupacionSemanal
+      maxOcupacion,
+      promedioOcupacion
     );
 
   } catch (error) {
@@ -255,14 +233,14 @@ function crearGraficaDias(resumenDias) {
     dia => resumenDias[dia].subieron
   );
 
-  if (chartDias) {
-    chartDias.destroy();
-  }
+  if (chartDias) chartDias.destroy();
 
   chartDias = new Chart(ctx, {
     type: "bar",
+
     data: {
       labels: diasSemana,
+
       datasets: [{
         label: "Pasajeros que subieron",
         data: valores,
@@ -270,25 +248,20 @@ function crearGraficaDias(resumenDias) {
         borderRadius: 8
       }]
     },
+
     options: {
       responsive: true,
+
       plugins: {
         legend: {
           display: false
-        },
-        tooltip: {
-          callbacks: {
-            afterLabel(contexto) {
-              return contexto.dataIndex === 4
-                ? "Valor estimado"
-                : "";
-            }
-          }
         }
       },
+
       scales: {
         y: {
           beginAtZero: true,
+
           title: {
             display: true,
             text: "Pasajeros"
@@ -307,19 +280,19 @@ function crearGraficaHoras(resumenHoras) {
   const valores = horas.map(hora => {
     const dato = resumenHoras[hora];
 
-    return Number(
-      (dato.suma / dato.cantidad).toFixed(1)
-    );
+    return (
+      dato.suma / dato.cantidad
+    ).toFixed(1);
   });
 
-  if (chartHoras) {
-    chartHoras.destroy();
-  }
+  if (chartHoras) chartHoras.destroy();
 
   chartHoras = new Chart(ctx, {
     type: "line",
+
     data: {
       labels: horas,
+
       datasets: [{
         label: "Promedio de pasajeros a bordo",
         data: valores,
@@ -330,21 +303,26 @@ function crearGraficaHoras(resumenHoras) {
         pointRadius: 4
       }]
     },
+
     options: {
       responsive: true,
+
       plugins: {
         legend: {
           display: false
         }
       },
+
       scales: {
         y: {
           beginAtZero: true,
+
           title: {
             display: true,
             text: "Pasajeros a bordo"
           }
         },
+
         x: {
           title: {
             display: true,
@@ -362,21 +340,19 @@ function crearTabla(resumenDias, totalSemana) {
   let horaPicoTotal = "--";
 
   diasSemana.forEach(dia => {
-    const dato = resumenDias[dia];
+    const d = resumenDias[dia];
 
-    if (dato.maxOcupacion > maxTotal) {
-      maxTotal = dato.maxOcupacion;
-      horaPicoTotal = dato.horaPico;
+    if (d.maxOcupacion > maxTotal) {
+      maxTotal = d.maxOcupacion;
+      horaPicoTotal = d.horaPico;
     }
-
-    const nombreMostrado = dia;
 
     html += `
       <tr>
-        <td>${nombreMostrado}</td>
-        <td>${dato.subieron}</td>
-        <td>${dato.maxOcupacion}</td>
-        <td>${dato.horaPico}</td>
+        <td>${dia}</td>
+        <td>${d.subieron}</td>
+        <td>${d.maxOcupacion}</td>
+        <td>${d.horaPico}</td>
       </tr>
     `;
   });
@@ -390,7 +366,8 @@ function crearTabla(resumenDias, totalSemana) {
     </tr>
   `;
 
-  document.getElementById("tablaSemanal").innerHTML = html;
+  document.getElementById("tablaSemanal").innerHTML =
+    html;
 }
 
 function crearConclusiones(
@@ -404,15 +381,16 @@ function crearConclusiones(
     `🚌 El día de mayor demanda fue ${diaMayor}, con ${valorDiaMayor} pasajeros registrados.`,
     `🚌 La hora pico de la semana se presentó alrededor de las ${horaPicoSemana}.`,
     `🚌 La máxima ocupación registrada fue de ${maxOcupacion} pasajeros a bordo.`,
-    `🚌 El promedio de ocupación semanal fue de ${promedioOcupacion.toFixed(1)} pasajeros a bordo.`,
-    `🚌 Los valores del viernes corresponden al promedio estimado de lunes a jueves.`
+    `🚌 El promedio de ocupación durante la semana fue de ${promedioOcupacion.toFixed(1)} pasajeros a bordo.`,
+    `🚌 La información recolectada permite identificar patrones iniciales de uso del transporte interno.`
   ];
 
   document.getElementById("listaConclusiones").innerHTML =
     conclusiones
-      .map(conclusion => `<li>${conclusion}</li>`)
+      .map(c => `<li>${c}</li>`)
       .join("");
 }
 
 cargarDatos();
+
 setInterval(cargarDatos, 30000);
