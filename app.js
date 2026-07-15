@@ -369,8 +369,7 @@ function crearTabla(resumenDias, totalSemana) {
       horaPicoTotal = dato.horaPico;
     }
 
-    const nombreMostrado =
-      dato.estimado ? `${dia}*` : dia;
+    const nombreMostrado = dia;
 
     html += `
       <tr>
