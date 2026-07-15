@@ -3,14 +3,32 @@ const url = "https://docs.google.com/spreadsheets/d/1J9Z6a5DbzElWSh1wNIQN0H7I_9b
 let chartDias = null;
 let chartHoras = null;
 
-const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
+const diasSemana = [
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes"
+];
+
+const diasPromedio = [
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves"
+];
 
 function obtenerFecha(celda) {
   if (!celda) return null;
 
-  if (celda.v instanceof Date) return celda.v;
+  if (celda.v instanceof Date) {
+    return celda.v;
+  }
 
-  if (typeof celda.v === "string" && celda.v.includes("Date")) {
+  if (
+    typeof celda.v === "string" &&
+    celda.v.includes("Date")
+  ) {
     const valores = celda.v.match(/\d+/g).map(Number);
 
     return new Date(
@@ -26,7 +44,9 @@ function obtenerFecha(celda) {
   if (celda.f) {
     const fecha = new Date(celda.f);
 
-    if (!isNaN(fecha)) return fecha;
+    if (!isNaN(fecha)) {
+      return fecha;
+    }
   }
 
   return null;
@@ -58,7 +78,10 @@ async function cargarDatos() {
   try {
     const respuesta = await fetch(url);
     const texto = await respuesta.text();
-    const json = JSON.parse(texto.substring(47).slice(0, -2));
+
+    const json = JSON.parse(
+      texto.substring(47).slice(0, -2)
+    );
 
     const datos = json.table.rows
       .filter(row => row.c && row.c[2])
@@ -70,11 +93,15 @@ async function cargarDatos() {
           dia: fecha ? nombreDia(fecha) : "",
           hora: fecha ? formatoHora(fecha) : "--",
           horaEntera: fecha ? fecha.getHours() : 0,
-          subieron: row.c[3]?.v || 0,
-          abordo: row.c[5]?.v || 0
+          subieron: Number(row.c[3]?.v) || 0,
+          abordo: Number(row.c[5]?.v) || 0
         };
       })
-      .filter(d => d.fecha && diasSemana.includes(d.dia));
+      .filter(
+        dato =>
+          dato.fecha &&
+          diasSemana.includes(dato.dia)
+      );
 
     const resumenDias = {};
     const resumenHoras = {};
@@ -92,24 +119,31 @@ async function cargarDatos() {
     let maxOcupacion = 0;
     let horaPicoSemana = "--";
 
-    datos.forEach(d => {
-      totalSemana += d.subieron;
-      sumaOcupacion += d.abordo;
+    datos.forEach(dato => {
+      totalSemana += dato.subieron;
+      sumaOcupacion += dato.abordo;
 
-      resumenDias[d.dia].subieron += d.subieron;
+      resumenDias[dato.dia].subieron +=
+        dato.subieron;
 
-      if (d.abordo > resumenDias[d.dia].maxOcupacion) {
-        resumenDias[d.dia].maxOcupacion = d.abordo;
-        resumenDias[d.dia].horaPico = d.hora;
+      if (
+        dato.abordo >
+        resumenDias[dato.dia].maxOcupacion
+      ) {
+        resumenDias[dato.dia].maxOcupacion =
+          dato.abordo;
+
+        resumenDias[dato.dia].horaPico =
+          dato.hora;
       }
 
-      if (d.abordo > maxOcupacion) {
-        maxOcupacion = d.abordo;
-        horaPicoSemana = d.hora;
+      if (dato.abordo > maxOcupacion) {
+        maxOcupacion = dato.abordo;
+        horaPicoSemana = dato.hora;
       }
 
       const horaTexto =
-        `${String(d.horaEntera).padStart(2, "0")}:00`;
+        `${String(dato.horaEntera).padStart(2, "0")}:00`;
 
       if (!resumenHoras[horaTexto]) {
         resumenHoras[horaTexto] = {
@@ -117,30 +151,26 @@ async function cargarDatos() {
         };
       }
 
-      resumenHoras[horaTexto].pasajeros += d.subieron;
+      resumenHoras[horaTexto].pasajeros +=
+        dato.subieron;
     });
 
-    // PROMEDIO DE LUNES A JUEVES PARA EL VIERNES
+    // Calcular viernes como promedio de lunes a jueves
 
-    const diasPromedio = [
-      "Lunes",
-      "Martes",
-      "Miércoles",
-      "Jueves"
-    ];
-
-    resumenDias["Viernes"].subieron = Math.round(
+    resumenDias.Viernes.subieron = Math.round(
       diasPromedio.reduce(
-        (suma, dia) => suma + resumenDias[dia].subieron,
+        (suma, dia) =>
+          suma + resumenDias[dia].subieron,
         0
-      ) / 4
+      ) / diasPromedio.length
     );
 
-    resumenDias["Viernes"].maxOcupacion = Math.round(
+    resumenDias.Viernes.maxOcupacion = Math.round(
       diasPromedio.reduce(
-        (suma, dia) => suma + resumenDias[dia].maxOcupacion,
+        (suma, dia) =>
+          suma + resumenDias[dia].maxOcupacion,
         0
-      ) / 4
+      ) / diasPromedio.length
     );
 
     const horasPico = diasPromedio
@@ -159,21 +189,30 @@ async function cargarDatos() {
         ) / horasPico.length
       );
 
-      const hora = Math.floor(promedioMinutos / 60);
+      const hora = Math.floor(
+        promedioMinutos / 60
+      );
+
       const minutos = promedioMinutos % 60;
 
-      resumenDias["Viernes"].horaPico =
+      resumenDias.Viernes.horaPico =
         `${String(hora).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
     }
 
-    totalSemana += resumenDias["Viernes"].subieron;
+    totalSemana +=
+      resumenDias.Viernes.subieron;
 
     let diaMayor = "--";
     let valorDiaMayor = 0;
 
     diasSemana.forEach(dia => {
-      if (resumenDias[dia].subieron > valorDiaMayor) {
-        valorDiaMayor = resumenDias[dia].subieron;
+      if (
+        resumenDias[dia].subieron >
+        valorDiaMayor
+      ) {
+        valorDiaMayor =
+          resumenDias[dia].subieron;
+
         diaMayor = dia;
       }
     });
@@ -183,25 +222,35 @@ async function cargarDatos() {
         ? sumaOcupacion / datos.length
         : 0;
 
-    document.getElementById("totalSemana").innerText =
-      totalSemana;
+    document.getElementById(
+      "totalSemana"
+    ).innerText = totalSemana;
 
-    document.getElementById("diaMayor").innerText =
-      diaMayor;
+    document.getElementById(
+      "diaMayor"
+    ).innerText = diaMayor;
 
-    document.getElementById("pasajerosDiaMayor").innerText =
+    document.getElementById(
+      "pasajerosDiaMayor"
+    ).innerText =
       `${valorDiaMayor} pasajeros`;
 
-    document.getElementById("horaPico").innerText =
-      horaPicoSemana;
+    document.getElementById(
+      "horaPico"
+    ).innerText = horaPicoSemana;
 
-    document.getElementById("maxOcupacion").innerText =
-      maxOcupacion;
+    document.getElementById(
+      "maxOcupacion"
+    ).innerText = maxOcupacion;
 
-    document.getElementById("promedioOcupacion").innerText =
+    document.getElementById(
+      "promedioOcupacion"
+    ).innerText =
       promedioOcupacion.toFixed(1);
 
-    document.getElementById("fechaSistema").innerText =
+    document.getElementById(
+      "fechaSistema"
+    ).innerText =
       new Date().toLocaleString("es-CO");
 
     crearGraficaDias(resumenDias);
@@ -217,21 +266,29 @@ async function cargarDatos() {
     );
 
   } catch (error) {
-    console.error("Error al cargar los datos:", error);
+    console.error(
+      "Error al cargar los datos:",
+      error
+    );
 
-    document.getElementById("fechaSistema").innerText =
+    document.getElementById(
+      "fechaSistema"
+    ).innerText =
       "Error al cargar datos";
   }
 }
 
 function crearGraficaDias(resumenDias) {
-  const ctx = document.getElementById("chartDias");
+  const ctx =
+    document.getElementById("chartDias");
 
   const valores = diasSemana.map(
     dia => resumenDias[dia].subieron
   );
 
-  if (chartDias) chartDias.destroy();
+  if (chartDias) {
+    chartDias.destroy();
+  }
 
   chartDias = new Chart(ctx, {
     type: "bar",
@@ -260,6 +317,10 @@ function crearGraficaDias(resumenDias) {
         y: {
           beginAtZero: true,
 
+          ticks: {
+            precision: 0
+          },
+
           title: {
             display: true,
             text: "Pasajeros"
@@ -271,15 +332,30 @@ function crearGraficaDias(resumenDias) {
 }
 
 function crearGraficaHoras(resumenHoras) {
-  const ctx = document.getElementById("chartHoras");
+  const ctx =
+    document.getElementById("chartHoras");
 
-  const horas = Object.keys(resumenHoras).sort();
+  const horas =
+    Object.keys(resumenHoras).sort();
 
-  const valores = horas.map(
-    hora => resumenHoras[hora].pasajeros
-  );
+  const valores = horas.map(hora => {
+    const totalLunesAJueves =
+      resumenHoras[hora].pasajeros;
 
-  if (chartHoras) chartHoras.destroy();
+    const viernesEstimado =
+      totalLunesAJueves / 4;
+
+    const totalCincoDias =
+      totalLunesAJueves + viernesEstimado;
+
+    return Math.round(
+      totalCincoDias / 5
+    );
+  });
+
+  if (chartHoras) {
+    chartHoras.destroy();
+  }
 
   chartHoras = new Chart(ctx, {
     type: "line",
@@ -288,7 +364,7 @@ function crearGraficaHoras(resumenHoras) {
       labels: horas,
 
       datasets: [{
-        label: "Pasajeros registrados por hora",
+        label: "Promedio de pasajeros por hora",
         data: valores,
         borderColor: "#007a3d",
         backgroundColor: "#007a3d",
@@ -311,6 +387,10 @@ function crearGraficaHoras(resumenHoras) {
         y: {
           beginAtZero: true,
 
+          ticks: {
+            precision: 0
+          },
+
           title: {
             display: true,
             text: "Pasajeros"
@@ -328,25 +408,34 @@ function crearGraficaHoras(resumenHoras) {
   });
 }
 
-function crearTabla(resumenDias, totalSemana) {
+function crearTabla(
+  resumenDias,
+  totalSemana
+) {
   let html = "";
   let maxTotal = 0;
   let horaPicoTotal = "--";
 
   diasSemana.forEach(dia => {
-    const d = resumenDias[dia];
+    const dato = resumenDias[dia];
 
-    if (d.maxOcupacion > maxTotal) {
-      maxTotal = d.maxOcupacion;
-      horaPicoTotal = d.horaPico;
+    if (
+      dato.maxOcupacion >
+      maxTotal
+    ) {
+      maxTotal =
+        dato.maxOcupacion;
+
+      horaPicoTotal =
+        dato.horaPico;
     }
 
     html += `
       <tr>
         <td>${dia}</td>
-        <td>${d.subieron}</td>
-        <td>${d.maxOcupacion}</td>
-        <td>${d.horaPico}</td>
+        <td>${dato.subieron}</td>
+        <td>${dato.maxOcupacion}</td>
+        <td>${dato.horaPico}</td>
       </tr>
     `;
   });
@@ -360,8 +449,9 @@ function crearTabla(resumenDias, totalSemana) {
     </tr>
   `;
 
-  document.getElementById("tablaSemanal").innerHTML =
-    html;
+  document.getElementById(
+    "tablaSemanal"
+  ).innerHTML = html;
 }
 
 function crearConclusiones(
@@ -379,9 +469,14 @@ function crearConclusiones(
     `🚌 La información recolectada permite identificar patrones iniciales de uso del transporte interno.`
   ];
 
-  document.getElementById("listaConclusiones").innerHTML =
+  document.getElementById(
+    "listaConclusiones"
+  ).innerHTML =
     conclusiones
-      .map(c => `<li>${c}</li>`)
+      .map(
+        conclusion =>
+          `<li>${conclusion}</li>`
+      )
       .join("");
 }
 
