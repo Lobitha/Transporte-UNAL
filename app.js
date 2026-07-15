@@ -113,13 +113,11 @@ async function cargarDatos() {
 
       if (!resumenHoras[horaTexto]) {
         resumenHoras[horaTexto] = {
-          suma: 0,
-          cantidad: 0
+          pasajeros: 0
         };
       }
 
-      resumenHoras[horaTexto].suma += d.abordo;
-      resumenHoras[horaTexto].cantidad++;
+      resumenHoras[horaTexto].pasajeros += d.subieron;
     });
 
     // PROMEDIO DE LUNES A JUEVES PARA EL VIERNES
@@ -277,13 +275,9 @@ function crearGraficaHoras(resumenHoras) {
 
   const horas = Object.keys(resumenHoras).sort();
 
-  const valores = horas.map(hora => {
-    const dato = resumenHoras[hora];
-
-    return (
-      dato.suma / dato.cantidad
-    ).toFixed(1);
-  });
+  const valores = horas.map(
+    hora => resumenHoras[hora].pasajeros
+  );
 
   if (chartHoras) chartHoras.destroy();
 
@@ -294,7 +288,7 @@ function crearGraficaHoras(resumenHoras) {
       labels: horas,
 
       datasets: [{
-        label: "Promedio de pasajeros a bordo",
+        label: "Pasajeros registrados por hora",
         data: valores,
         borderColor: "#007a3d",
         backgroundColor: "#007a3d",
@@ -319,7 +313,7 @@ function crearGraficaHoras(resumenHoras) {
 
           title: {
             display: true,
-            text: "Pasajeros a bordo"
+            text: "Pasajeros"
           }
         },
 
